@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compaction-limit"
+version = "0.1.0"
+description = "Map model-plus-KV memory/quality frontiers with Attention Matching."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "accelerate>=1.12.0",
+  "numpy>=2.0",
+  "rouge-score>=0.1.2",
+  "torch==2.8.0",
+  "tqdm>=4.66",
+  "transformers==4.57.1",
+]
+
+[project.optional-dependencies]
+quantized = ["bitsandbytes>=0.48.1"]
+benchmarks = ["datasets>=4.0"]
+dev = ["pytest>=8.3"]
+
+[project.scripts]
+compaction-limit = "compaction_limit.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

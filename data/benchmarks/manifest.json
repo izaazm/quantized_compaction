@@ -1,0 +1,32 @@
+{
+  "created_at": "2026-10-04T14:18:06.315763+00:00",
+  "seed": 42,
+  "ruler": {
+    "path": "data/benchmarks/ruler_16k.jsonl",
+    "repository": "simonjegou/ruler",
+    "configuration": "16384",
+    "available_rows": 6500,
+    "selected_rows": 300,
+    "tasks": [
+      "fwe",
+      "qa_1",
+      "qa_2"
+    ],
+    "requested_per_task": {
+      "fwe": 150,
+      "qa_1": 75,
+      "qa_2": 75
+    },
+    "available_per_task": {
+      "fwe": 500,
+      "qa_1": 500,
+      "qa_2": 500
+    },
+    "selected_per_task": {
+      "fwe": 150,
+      "qa_1": 75,
+      "qa_2": 75
+    },
+    "is_full_official_task_evaluation": false
+  }
+}
