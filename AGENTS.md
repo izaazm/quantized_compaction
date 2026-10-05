@@ -1,4 +1,4 @@
-# Compaction Limit Agent Notes
+# Quantized Compaction Agent Notes
 
 ## Purpose
 
@@ -91,20 +91,20 @@ are the inputs for later memory-versus-performance analysis.
 
 ## Important implementation files
 
-- `src/compaction_limit/suites.py` defines the Stage 1 and Stage 2 grids and
+- `src/quantized_compaction/suites.py` defines the Stage 1 and Stage 2 grids and
   the Stage 1-to-2 and Stage 2-to-3 funnels.
-- `src/compaction_limit/pipeline.py` runs Stages 1-3 sequentially, resumes only
+- `src/quantized_compaction/pipeline.py` runs Stages 1-3 sequentially, resumes only
   exact completed configurations, and writes combined summaries.
-- `src/compaction_limit/runner.py` loads models and data, runs compaction and
+- `src/quantized_compaction/runner.py` loads models and data, runs compaction and
   evaluation, audits quantization, measures memory, and writes results.
-- `src/compaction_limit/am_backend.py` integrates the vendored Attention
+- `src/quantized_compaction/am_backend.py` integrates the vendored Attention
   Matching implementation and prepares evaluation prompts.
-- `src/compaction_limit/quantized_am.py` implements quantization-aware fitting.
-- `src/compaction_limit/quantization.py` implements KV fake quantization and
+- `src/quantized_compaction/quantized_am.py` implements quantization-aware fitting.
+- `src/quantized_compaction/quantization.py` implements KV fake quantization and
   packed-memory accounting.
-- `src/compaction_limit/data.py` loads TOFU, RULER, and QuALITY corpora.
-- `src/compaction_limit/metrics.py` implements generated-answer metrics.
-- `src/compaction_limit/prepare_benchmarks.py` prepares RULER and QuALITY data.
+- `src/quantized_compaction/data.py` loads TOFU, RULER, and QuALITY corpora.
+- `src/quantized_compaction/metrics.py` implements generated-answer metrics.
+- `src/quantized_compaction/prepare_benchmarks.py` prepares RULER and QuALITY data.
 - `scripts/run_all_experiments.sh` is the main Stage 1-3 launcher.
 - `scripts/run_experiment.sh` runs a standalone experiment.
 - `vendor/attention_matching/` contains the vendored compaction dependency.

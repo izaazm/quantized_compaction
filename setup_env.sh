@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-TASK_UV_CACHE_DIR="${UV_CACHE_DIR:-${TMPDIR:-/tmp}/compaction_limit_uv_cache}"
+TASK_UV_CACHE_DIR="${UV_CACHE_DIR:-${TMPDIR:-/tmp}/quantized_compaction_uv_cache}"
 export UV_CACHE_DIR="$TASK_UV_CACHE_DIR"
 
 # Optional controls:

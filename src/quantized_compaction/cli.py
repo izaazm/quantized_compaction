@@ -74,7 +74,7 @@ def _add_grid_arguments(parser: argparse.ArgumentParser) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="compaction-limit",
+        prog="quantized-compaction",
         description="Map KV cache cardinality and precision limits on local TOFU data.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)

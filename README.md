@@ -1,4 +1,4 @@
-# Compaction Limit
+# Quantized Compaction
 
 This project measures memory and quality when Attention Matching KV-cache
 compaction is combined with KV quantization and BF16, INT8, or NF4 model
@@ -8,7 +8,7 @@ the best configuration across model precisions and denser retention ratios.
 
 ## Directory
 
-- `src/compaction_limit/`: experiment pipeline, compaction, quantization,
+- `src/quantized_compaction/`: experiment pipeline, compaction, quantization,
   evaluation, and result logging.
 - `scripts/`: experiment launchers.
 - `data/`: benchmark data.

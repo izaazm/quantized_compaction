@@ -115,7 +115,7 @@ if [[ "$SAVE_DETAILED_COMPACTION_STATS" != "true" ]]; then
 fi
 
 if [[ "$PLAN_ONLY" == "true" ]]; then
-	"$PYTHON_BIN" -m compaction_limit.pipeline --plan-only "${ARGS[@]}"
+	"$PYTHON_BIN" -m quantized_compaction.pipeline --plan-only "${ARGS[@]}"
 	exit 0
 fi
 
@@ -213,8 +213,8 @@ if [[ "$PREPARE_BENCHMARKS" == "true" ]]; then
 		)
 		if [[ "$NEED_RULER" != "true" ]]; then PREP_ARGS+=(--skip-ruler); fi
 		if [[ "$NEED_QUALITY" != "true" ]]; then PREP_ARGS+=(--skip-quality); fi
-		"$PYTHON_BIN" -m compaction_limit.prepare_benchmarks "${PREP_ARGS[@]}"
+		"$PYTHON_BIN" -m quantized_compaction.prepare_benchmarks "${PREP_ARGS[@]}"
 	fi
 fi
 
-"$PYTHON_BIN" -m compaction_limit.pipeline "${ARGS[@]}"
+"$PYTHON_BIN" -m quantized_compaction.pipeline "${ARGS[@]}"

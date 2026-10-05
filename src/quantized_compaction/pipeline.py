@@ -799,7 +799,7 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Run the stratified-funnel compaction-limit research pipeline."
+        description="Run the stratified-funnel quantized-compaction research pipeline."
     )
     parser.add_argument("--plan-only", action="store_true")
     parser.add_argument("--pipeline-dir", type=Path)

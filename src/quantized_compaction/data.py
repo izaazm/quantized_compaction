@@ -217,7 +217,7 @@ def load_ruler_corpora(
     if not path.exists():
         raise FileNotFoundError(
             f"Prepared RULER data not found: {path}. Run "
-            "`python -m compaction_limit.prepare_benchmarks`."
+            "`python -m quantized_compaction.prepare_benchmarks`."
         )
     rows = _sample_rows(_jsonl_rows(path), max_questions, seed)
     grouped: dict[str, list[tuple[int, dict[str, Any]]]] = {}
@@ -304,7 +304,7 @@ def load_hotpotqa_corpora(
     if not path.exists():
         raise FileNotFoundError(
             f"Prepared HotPotQA data not found: {path}. Run "
-            "`python -m compaction_limit.prepare_benchmarks`."
+            "`python -m quantized_compaction.prepare_benchmarks`."
         )
     raw = _read_json(path)
     if not isinstance(raw, list):
@@ -360,7 +360,7 @@ def load_quality_corpora(
     if not path.exists():
         raise FileNotFoundError(
             f"Prepared QuALITY data not found: {path}. Run "
-            "`python -m compaction_limit.prepare_benchmarks --skip-ruler "
+            "`python -m quantized_compaction.prepare_benchmarks --skip-ruler "
             "--skip-hotpotqa`."
         )
 

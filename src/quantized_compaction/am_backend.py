@@ -23,7 +23,7 @@ _BNB_INT8_CAST_MESSAGE = (
 class _ExpectedBnbInt8CastFilter(logging.Filter):
     """Drop the per-matmul BF16-to-FP16 notice without hiding other warnings."""
 
-    installed_by_compaction_limit = True
+    installed_by_quantized_compaction = True
 
     def filter(self, record: logging.LogRecord) -> bool:
         return _BNB_INT8_CAST_MESSAGE not in record.getMessage()
@@ -32,7 +32,7 @@ class _ExpectedBnbInt8CastFilter(logging.Filter):
 def _suppress_repeated_bnb_int8_cast_warning() -> None:
     logger = logging.getLogger(_BNB_INT8_CAST_LOGGER)
     if not any(
-        getattr(existing, "installed_by_compaction_limit", False)
+        getattr(existing, "installed_by_quantized_compaction", False)
         for existing in logger.filters
     ):
         logger.addFilter(_ExpectedBnbInt8CastFilter())
@@ -77,7 +77,9 @@ def load_model_and_tokenizer(
             "The Attention Matching runner currently requires a CUDA device."
         )
     if not torch.cuda.is_available():
-        raise RuntimeError("CUDA is not available; use `compaction-limit plan` on CPU.")
+        raise RuntimeError(
+            "CUDA is not available; use `quantized-compaction plan` on CPU."
+        )
     if "qwen3" not in model_name.lower():
         raise ValueError("This pilot supports Qwen3 checkpoints only.")
 

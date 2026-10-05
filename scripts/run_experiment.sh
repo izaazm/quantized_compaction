@@ -95,7 +95,7 @@ fi
 cd "$ROOT_DIR"
 
 if [[ "$PLAN_ONLY" == "true" ]]; then
-	"$PYTHON_BIN" -m compaction_limit.cli plan "${GRID_ARGS[@]}"
+	"$PYTHON_BIN" -m quantized_compaction.cli plan "${GRID_ARGS[@]}"
 	exit 0
 fi
 
@@ -133,7 +133,7 @@ mkdir -p "$SWEEP_DIR/logs" "$SWEEP_DIR/runs"
 	printf 'SWEEP_NAME=%q\n' "$SWEEP_NAME"
 } > "$SWEEP_DIR/settings.env"
 
-"$PYTHON_BIN" -m compaction_limit.cli plan "${GRID_ARGS[@]}" > "$SWEEP_DIR/plan.json"
+"$PYTHON_BIN" -m quantized_compaction.cli plan "${GRID_ARGS[@]}" > "$SWEEP_DIR/plan.json"
 
 {
 	date -u
@@ -158,7 +158,7 @@ finish_sweep() {
 		final_status="complete"
 	fi
 	printf '%s\n' "$final_status" > "$SWEEP_DIR/status.txt"
-	"$PYTHON_BIN" -m compaction_limit.aggregate \
+	"$PYTHON_BIN" -m quantized_compaction.aggregate \
 		--sweep-dir "$SWEEP_DIR" --status "$final_status" || true
 	printf 'Sweep %s. Artifacts: %s\n' "$final_status" "$SWEEP_DIR"
 	exit "$exit_code"
@@ -200,6 +200,6 @@ fi
 
 for weight_precision in "${WEIGHT_PRECISION_ARGS[@]}"; do
 	printf 'Starting %s weights for %s\n' "$weight_precision" "$MODEL_NAME"
-	"$PYTHON_BIN" -m compaction_limit.cli run \
+	"$PYTHON_BIN" -m quantized_compaction.cli run \
 		"${COMMON_ARGS[@]}" --weight-precision "$weight_precision"
 done

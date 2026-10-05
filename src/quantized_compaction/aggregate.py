@@ -123,7 +123,7 @@ def aggregate_sweep(sweep_dir: Path, status: str) -> dict[str, Any]:
 
 
 def main(argv: Sequence[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(description="Aggregate a compaction-limit sweep.")
+    parser = argparse.ArgumentParser(description="Aggregate a quantized-compaction sweep.")
     parser.add_argument("--sweep-dir", type=Path, required=True)
     parser.add_argument(
         "--status", choices=("complete", "failed", "running"), required=True
