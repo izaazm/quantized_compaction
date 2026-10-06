@@ -31,15 +31,14 @@ memory as the final tiebreaker.
 
 Stage 2 measures composition order. It evaluates the five Stage 1 precision
 pairs at the 10%, 5%, and 2% ideal byte budgets with `post`, `pre`, and `aware`
-composition. It does not rerun dense controls. The best complete K/V precision
-and composition family is selected using its worst-case result across all
-Stage 2 budgets and datasets.
+composition. It does not rerun dense controls, and it does not select or
+promote a family into Stage 3.
 
-Stage 3 measures the interaction between the best Stage 2 family and model
-weight quantization. It evaluates that one family at retained-entry ratios
-1.0, 0.75, 0.50, 0.25, 0.10, and 0.05 under BF16, INT8, and NF4 model weights.
-The r=1.0 condition is the selected K/V precision without compaction. Stage 3
-therefore evaluates 18 configurations in total.
+Stage 3 is independent of Stages 1 and 2. It evaluates K16V16, K8V8, and K4V4
+with `post` composition at retained-entry ratios 1.0, 0.75, 0.50, 0.25, 0.10,
+and 0.05 under BF16, INT8, and NF4 model weights. The r=1.0 conditions use no
+compaction. Stage 3 evaluates 18 conditions per model precision and 54
+configurations in total.
 
 ## Datasets
 
@@ -92,7 +91,7 @@ are the inputs for later memory-versus-performance analysis.
 ## Important implementation files
 
 - `src/quantized_compaction/suites.py` defines the Stage 1 and Stage 2 grids and
-  the Stage 1-to-2 and Stage 2-to-3 funnels.
+  the Stage 1-to-2 funnel and independent Stage 3 grid.
 - `src/quantized_compaction/pipeline.py` runs Stages 1-3 sequentially, resumes only
   exact completed configurations, and writes combined summaries.
 - `src/quantized_compaction/runner.py` loads models and data, runs compaction and
@@ -164,7 +163,7 @@ outputs/pipelines/<pipeline-name>/
   combined_summary.csv
   stage1/diagnostics.json
   stage2/diagnostics.json
-  stage3/funnel.json
+  stage3/design.json
   stage1/<dataset>/runs/<run>/...
   stage2/<dataset>/runs/<run>/...
   stage3/<dataset>/runs/<weight-run>/...

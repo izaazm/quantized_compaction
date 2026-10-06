@@ -184,17 +184,6 @@ def _group_quality_key(
     return tuple(max(key[index] for key in keys) for index in range(4))
 
 
-def _condition_from_row(row: dict[str, Any]) -> Condition:
-    return Condition(
-        method=str(row["method"]),
-        entry_ratio=float(row["entry_ratio"]),
-        key_bits=int(row["key_bits"]),
-        value_bits=int(row["value_bits"]),
-        ideal_budget_fraction=float(row["ideal_budget_fraction"]),
-        composition_mode=str(row.get("composition_mode", "post")),
-    )
-
-
 def _is_primary_budget(row: dict[str, Any]) -> bool:
     return _finite(row.get("ideal_budget_fraction")) and any(
         math.isclose(float(row["ideal_budget_fraction"]), budget, abs_tol=1e-9)
@@ -241,107 +230,31 @@ def select_stage2_precision_pairs(
     }
 
 
-def build_stage3_funnel(
-    stage1_rows: Sequence[dict[str, Any]],
-    stage2_rows: Sequence[dict[str, Any]],
-    stage2_precision_pairs: Sequence[tuple[int, int]],
-) -> tuple[tuple[Condition, ...], dict[str, Any]]:
-    """Build the compact model-weight interaction grid.
+def build_stage3_suite() -> tuple[Condition, ...]:
+    """Build the fixed symmetric-precision model-weight interaction grid."""
 
-    Stages 1-2 already map the detailed BF16 KV surface. Stage 3 therefore
-    selects the best Stage 2 family and extends it to larger retained-entry
-    ratios that can spend model-weight savings on a larger cache.
-    """
-
-    supported_pairs = set(map(tuple, stage2_precision_pairs))
-    if (16, 16) not in supported_pairs:
-        raise ValueError("Stage 3 requires the Stage 2 K16V16 compaction control.")
-
-    baselines = _dense_baselines(stage1_rows)
-    grouped_families: dict[tuple[int, int, str], list[dict[str, Any]]] = {}
-    for row in stage2_rows:
-        pair = (int(row.get("key_bits", 0)), int(row.get("value_bits", 0)))
-        if row.get("method") != "am":
-            continue
-        family = (*pair, str(row.get("composition_mode", "post")))
-        grouped_families.setdefault(family, []).append(row)
-    if not grouped_families:
-        raise ValueError("Stage 3 requires at least one Stage 2 AM family.")
-
-    expected_axes = set(baselines)
-    expected_budgets = set(STAGE2_BUDGETS)
-
-    def family_key(item: tuple[tuple[int, int, str], list[dict[str, Any]]]):
-        _, family_rows = item
-        observed_axes = {_axis(row) for row in family_rows}
-        observed_budgets = {
-            float(row["ideal_budget_fraction"])
-            for row in family_rows
-            if _finite(row.get("ideal_budget_fraction"))
-        }
-        incomplete = int(
-            observed_axes != expected_axes
-            or not all(
-                any(math.isclose(value, budget, abs_tol=1e-9) for value in observed_budgets)
-                for budget in expected_budgets
+    conditions: list[Condition] = []
+    for pair in SYMMETRIC_PAIRS:
+        conditions.append(
+            Condition(
+                method="dense",
+                entry_ratio=1.0,
+                key_bits=pair[0],
+                value_bits=pair[1],
+                ideal_budget_fraction=(pair[0] + pair[1]) / 32.0,
+                composition_mode="post",
             )
         )
-        return (incomplete, *_group_quality_key(family_rows, baselines)[:3])
-
-    selected_family, selected_family_rows = min(
-        grouped_families.items(), key=family_key
-    )
-    if family_key((selected_family, selected_family_rows))[0]:
-        raise ValueError("Stage 2 results are incomplete for Stage 3 family selection.")
-    selected_pair = (selected_family[0], selected_family[1])
-    selected_mode = selected_family[2]
-
-    conditions = [
-        Condition(
-            method="dense",
-            entry_ratio=1.0,
-            key_bits=selected_pair[0],
-            value_bits=selected_pair[1],
-            ideal_budget_fraction=(selected_pair[0] + selected_pair[1]) / 32.0,
-            composition_mode="post",
-        ),
-        *[
-            _fixed_ratio_condition("am", ratio, selected_pair, selected_mode)
+        conditions.extend(
+            _fixed_ratio_condition("am", ratio, pair, "post")
             for ratio in STAGE3_RETAINED_RATIOS
-        ],
-    ]
-    deduplicated = _deduplicate(conditions)
-    if len(deduplicated) != 6:
-        raise AssertionError(
-            f"Stage 3 must contain exactly 6 conditions, got {len(deduplicated)}."
         )
-
-    report = {
-        "selection_applied": True,
-        "selection_scope": "stage3_model_weight_interaction_grid",
-        "strategy": (
-            "best_stage2_family_at_dense_75pct_50pct_25pct_10pct_5pct_retention"
-        ),
-        "num_candidate_families": len(grouped_families),
-        "num_selected_conditions_per_weight_precision": len(deduplicated),
-        "retained_entry_ratios": [1.0, *STAGE3_RETAINED_RATIOS],
-        "selected_family": {
-            "key_bits": selected_pair[0],
-            "value_bits": selected_pair[1],
-            "composition_mode": selected_mode,
-            "worst_case_performance_key": list(
-                _group_quality_key(selected_family_rows, baselines)[:3]
-            ),
-        },
-        "candidate_family_performance_keys": {
-            f"k{family[0]}v{family[1]}_{family[2]}": list(
-                _group_quality_key(family_rows, baselines)[:3]
-            )
-            for family, family_rows in sorted(grouped_families.items())
-        },
-        "selected_conditions": [condition.to_dict() for condition in deduplicated],
-    }
-    return deduplicated, report
+    deduplicated = _deduplicate(conditions)
+    if len(deduplicated) != 18:
+        raise AssertionError(
+            f"Stage 3 must contain exactly 18 conditions, got {len(deduplicated)}."
+        )
+    return deduplicated
 
 
 def _finite(value: Any) -> bool:
@@ -372,7 +285,7 @@ def select_stage1(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
 
 
 def select_stage2(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
-    """Return composition diagnostics before the stratified Stage 3 funnel."""
+    """Return Stage 2 composition diagnostics."""
 
     return {
         "selection_applied": False,
@@ -387,7 +300,7 @@ def select_stage2(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
 def build_pipeline_plan() -> dict[str, Any]:
     stage1 = build_stage1_suite()
     stage2 = build_stage2_suite()
-    stage3_conditions = 6
+    stage3 = build_stage3_suite()
     return {
         "sequential": True,
         "funnel_selection": True,
@@ -418,14 +331,16 @@ def build_pipeline_plan() -> dict[str, Any]:
         },
         "stage3": {
             "purpose": "model_weight_by_kv_policy_memory_quality_tradeoff",
-            "selection_dependency": "best-performing Stage 2 family",
-            "conditions_per_weight_precision": stage3_conditions,
+            "selection_dependency": None,
+            "conditions_per_weight_precision": len(stage3),
             "retained_entry_ratios": [1.0, *STAGE3_RETAINED_RATIOS],
-            "families": ["selected_stage2_family"],
+            "precision_pairs": [list(pair) for pair in SYMMETRIC_PAIRS],
+            "composition_modes": ["post"],
             "queries_per_kv_head": 5000,
             "datasets": ["tofu", "quality"],
             "questions": {"tofu": 200, "quality": "all questions in selected articles"},
             "methods": ["am"],
             "weight_precisions": ["bf16", "int8", "nf4"],
+            "conditions": [condition.to_dict() for condition in stage3],
         },
     }

@@ -17,7 +17,7 @@ from .suites import (
     build_pipeline_plan,
     build_stage1_suite,
     build_stage2_suite,
-    build_stage3_funnel,
+    build_stage3_suite,
     select_stage1,
     select_stage2,
 )
@@ -103,6 +103,32 @@ def _condition_ids(config: RunConfig) -> list[str]:
 
 def _config_payload(config: RunConfig) -> dict[str, Any]:
     return json.loads(json.dumps(asdict(config), default=_json_default))
+
+
+def _normalized_pipeline_config(config: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(config)
+    datasets = set(normalized.get("datasets", ()))
+    if "ruler" not in datasets:
+        for name in (
+            "ruler_path",
+            "ruler_task_samples",
+            "screen_ruler_questions",
+            "confirm_ruler_questions",
+            "final_ruler_questions",
+            "screen_ruler_generation_questions",
+            "confirm_ruler_generation_questions",
+            "final_ruler_generation_questions",
+            "ruler_generation_batch_size",
+        ):
+            normalized.pop(name, None)
+    if "quality" not in datasets:
+        for name in (
+            "quality_path",
+            "quality_articles",
+            "quality_generation_batch_size",
+        ):
+            normalized.pop(name, None)
+    return normalized
 
 
 def _find_complete_run(output_root: Path, config: RunConfig) -> Path | None:
@@ -390,7 +416,7 @@ def _resolved_plan(
             "conditions": [condition.to_dict() for condition in stage2_conditions],
         },
         "stage3": {
-            "selection_dependency": "best-performing Stage 2 family",
+            "selection_dependency": None,
             "datasets": list(datasets),
             "weight_precisions": list(weight_precisions),
             "conditions": [condition.to_dict() for condition in stage3_conditions],
@@ -553,13 +579,16 @@ def run_pipeline(args: argparse.Namespace) -> Path:
             for name, value in previous_manifest.get("config", {}).items()
             if name not in ("resume", "plan_only")
         }
-        if previous_config != config_payload:
+        if _normalized_pipeline_config(previous_config) != _normalized_pipeline_config(
+            config_payload
+        ):
             raise ValueError(
                 f"Pipeline directory {pipeline_dir} already contains runs from a "
                 "different configuration; choose a new PIPELINE_NAME to avoid "
                 "mixing incompatible summaries."
             )
     stage1_conditions = build_stage1_suite()
+    stage3_conditions = build_stage3_suite()
     _write_json(pipeline_dir / "plan.json", _runtime_pipeline_plan(args))
 
     manifest: dict[str, Any] = {
@@ -570,8 +599,9 @@ def run_pipeline(args: argparse.Namespace) -> Path:
         "design": (
             "Every stage uses context-prefill AM-HighestAttnKeys. Stage 1 crosses "
             "equal-byte budgets and fixed retention ratios with K/V precision. "
-            "Stage 2 measures composition order. Stage 3 sweeps the best Stage 2 "
-            "family across model-weight precisions and retained-entry ratios."
+            "Stage 2 measures composition order. Stage 3 independently sweeps "
+            "K16V16, K8V8, and K4V4 across model-weight precisions and retained-"
+            "entry ratios."
         ),
     }
     _write_json(pipeline_dir / "pipeline_manifest.json", manifest)
@@ -692,16 +722,16 @@ def run_pipeline(args: argparse.Namespace) -> Path:
 
         active_stage = "stage3"
         active_stage_start = time.perf_counter()
-        stage3_conditions, stage3_funnel = build_stage3_funnel(
-            stage1_rows,
-            stage2_rows,
-            stage2_precision_pairs,
-        )
-        stage3_funnel["source_runs"] = [
-            *[str(path.relative_to(pipeline_dir)) for path in stage1_runs],
-            *[str(path.relative_to(pipeline_dir)) for path in stage2_runs],
-        ]
-        _write_json(pipeline_dir / "stage3" / "funnel.json", stage3_funnel)
+        stage3_design = {
+            "selection_applied": False,
+            "selection_dependency": None,
+            "precision_pairs": [[16, 16], [8, 8], [4, 4]],
+            "composition_mode": "post",
+            "retained_entry_ratios": [1.0, 0.75, 0.50, 0.25, 0.10, 0.05],
+            "conditions_per_weight_precision": len(stage3_conditions),
+            "conditions": [condition.to_dict() for condition in stage3_conditions],
+        }
+        _write_json(pipeline_dir / "stage3" / "design.json", stage3_design)
         print(
             f"Stage 3/{total_stages}: retained-KV sweep across model weights",
             flush=True,
@@ -757,7 +787,7 @@ def run_pipeline(args: argparse.Namespace) -> Path:
                 "stage2_runs": [
                     str(path.relative_to(pipeline_dir)) for path in stage2_runs
                 ],
-                "stage3_funnel": stage3_funnel,
+                "stage3_design": stage3_design,
                 "stage3_runs": [
                     str(path.relative_to(pipeline_dir)) for path in stage3_runs
                 ],
